@@ -1,0 +1,101 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@keyframes ticker {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-ticker {
+  animation: ticker 20s linear infinite;
+}
+
+.pixel-font {
+  font-family: 'Press Start 2P', cursive;
+  letter-spacing: 0;
+  font-size: 1rem;
+}
+
+.digital-counter {
+  font-family: 'VT323', monospace;
+  letter-spacing: 2px;
+}
+
+.pixel-digit {
+  display: inline-block;
+  width: 24px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  background-color: #333;
+  color: #fff;
+  border-radius: 4px;
+  margin: 0 4px;
+}
+
+.pixel-divider {
+  display: inline-block;
+  width: 10px;
+  height: 36px;
+  line-height: 36px;
+  text-align: center;
+  color: #666;
+  margin: 0 4px;
+}
+
+.nav-button {
+  @apply flex flex-col items-center justify-center h-full px-6 border-r border-gray-700 
+         hover:bg-gray-700 transition-colors duration-200;
+}
+
+.nav-button-active {
+  @apply bg-blue-600;
+}
+
+.nav-icon {
+  @apply w-5 h-5 mb-1;
+}
+
+.nav-label {
+  @apply text-xs text-gray-300;
+}
+
+.login-button {
+  background: linear-gradient(to right, #3b82f6, #2563eb);
+  transition: all 0.3s ease;
+}
+
+.login-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+.grid-container {
+  white-space: nowrap; /* Prevent line breaks */
+  overflow-x: auto; /* Enable horizontal scrolling */
+  overflow-y: hidden; /* Disable vertical scrolling */
+  -webkit-overflow-scrolling: touch; /* Smoother scrolling (optional) */
+}
+
+.section-container {
+  display: inline-grid; /* Inline grid for horizontal layout */
+  grid-template-columns: repeat(4, 1fr); /* Divide into 4 equal sections */
+  width: 640000px; /* Total width of all sections combined */
+}
+
+.canvas-section {
+  width: 160000px; /* Width of each section (640k / 4) */
+}
+canvas {
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
