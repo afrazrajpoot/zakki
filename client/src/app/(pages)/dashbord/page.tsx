@@ -1,3 +1,5 @@
+"use client"
+
 import React from 'react';
 import { Bell, Upload, X, ImageIcon, Link2, Users, Mic, MicOff, Hand, ChevronDown } from 'lucide-react';
 
