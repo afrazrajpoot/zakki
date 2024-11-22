@@ -1,3 +1,4 @@
+
 const express = require("express");
 const app = express();
 const cors = require("cors");
@@ -13,6 +14,7 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 const db = require("./db/connection");
 db.connect();
 app.use("/api/v1", userRoute);
+app.use('/api/v1',require('./routes/paymentRoutes'))
 app.use(express.static('public'));
 
 app.all("*", (req, res) => {

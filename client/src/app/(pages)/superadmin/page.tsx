@@ -1,5 +1,6 @@
 "use client"
 
+import { useGetPaymentDataQuery, useUpdateUserMutation } from '@/store/storeApi';
 import React, { useState, useRef, useEffect } from 'react';
 
 const ViewDashboard = () => {
@@ -13,14 +14,17 @@ const ViewDashboard = () => {
   const [tokenName, setTokenName] = useState('');
   const [tokenIcon, setTokenIcon] = useState(null);
   const totalGrids = 100000;
+const {isLoading,isError,data,isSuccess} = useGetPaymentDataQuery()
+const [updateStatus,{isLoading:updateLoading,isError:updateError,isSuccess:updateSuccess}] = useUpdateUserMutation()
+  const statusOptions = ['All Status', 'Approve', 'Pending', 'Reject'];
+  const [filter, setFilter] = useState([]);
 
-  const statusOptions = ['All Status', 'Approved', 'Pending', 'Canceled'];
-
+const [paymentData,setPaymentData] = useState([])
   const calculateAvailablePercentage = () => {
     return ((availableGrids / totalGrids) * 100).toFixed(1);
   };
 
-  const handleTokenIconUpload = (event) => {
+  const handleTokenIconUpload = (event:any) => {
     const file = event.target.files[0];
     if (file) {
       setTokenIcon(URL.createObjectURL(file));
@@ -39,19 +43,20 @@ const ViewDashboard = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case 'approved':
+    switch (status) {
+      case 'Approve':
         return 'bg-green-500';
       case 'pending':
         return 'bg-yellow-500';
-      case 'canceled':
+      case 'Reject':
         return 'bg-red-500';
       default:
         return 'bg-gray-500';
     }
   };
-
+console.log(searchQuery,'search')
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
       {/* Header */}
@@ -235,92 +240,81 @@ const ViewDashboard = () => {
             </button>
             
             {isDropdownOpen && (
-              <div className="absolute z-10 mt-1 w-40 bg-gray-700 rounded-lg shadow-lg">
-                {statusOptions.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => {
-                      setSelectedStatus(status);
-                      setIsDropdownOpen(false);
-                    }}
-                    className="w-full px-4 py-2 text-left hover:bg-gray-600 first:rounded-t-lg last:rounded-b-lg"
-                  >
-                    {status}
-                  </button>
-                ))}
-              </div>
-            )}
+  <div className="absolute z-10 mt-1 w-40 bg-gray-700 rounded-lg shadow-lg">
+    {statusOptions.map((status) => (
+      <button
+        key={status}
+
+        onClick={() => {
+          setSelectedStatus(status); // Update the selected status
+          const filterData = data?.payments?.filter((payment: any) => {
+            return payment.status === status; // Use the status directly here
+          });
+          console.log(filterData, 'Filtered Data');
+          setFilter(filterData)
+          setIsDropdownOpen(false);
+        }}
+        className="w-full px-4 py-2 text-left hover:bg-gray-600 first:rounded-t-lg last:rounded-b-lg"
+      >
+        {status}
+      </button>
+    ))}
+  </div>
+)}
+
           </div>
         </div>
 
         <div className="space-y-4">
-          {[
-            {
-              username: 'john_doe',
-              status: 'PENDING',
-              timestamp: '3/15/2024, 10:30:00 AM',
-              wallet: '0x74d...f44e',
-              currency: 'ETH',
-              grids: 200,
-              amount: 100.00
-            },
-            {
-              username: 'alice_web3',
-              status: 'APPROVED',
-              timestamp: '3/15/2024, 11:45:00 AM',
-              wallet: '0x9b7f...34399',
-              currency: 'SOL',
-              grids: 200,
-              amount: 100.00
-            },
-            {
-              username: 'bob_crypto',
-              status: 'CANCELED',
-              timestamp: '3/15/2024, 12:15:00 PM',
-              wallet: '0x3a2...b881',
-              currency: 'BTC',
-              grids: 150,
-              amount: 75.00
-            }
-          ].map((approval, index) => (
-            <div key={index} className="bg-gray-700 rounded-lg p-4">
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span>{approval.username}</span>
-                    <span className={`px-2 py-1 text-xs ${getStatusColor(approval.status)} rounded`}>
-                      {approval.status}
-                    </span>
-                  </div>
-                  <div className="text-sm text-gray-400">
-                    {approval.timestamp}
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div>{approval.grids} Grids</div>
-                  <div className="text-green-500">${approval.amount}</div>
-                </div>
-              </div>
-              
-              <div className="flex items-center gap-2 text-sm bg-gray-800 rounded p-2">
-                <span>{approval.wallet}</span>
-                <span>({approval.currency})</span>
-                <button className="p-1 text-gray-400 hover:text-white">
-                  📋
-                </button>
-              </div>
-              
-              <div className="flex justify-end gap-2 mt-2">
-                <button className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
-                  Reject
-                </button>
-                <button className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
-                  Approve
-                </button>
-              </div>
+  {(filter?.length > 0 ? filter : data?.payments)?.map((approval, index) => {
+    const date = new Date(approval.created_at).toLocaleDateString();
+    return (
+      <div key={index} className="bg-gray-700 rounded-lg p-4">
+        <div className="flex justify-between items-start mb-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <span>{approval.username}</span>
+              <span className={`px-2 py-1 text-xs ${getStatusColor(approval.status)} rounded`}>
+                {approval.status}
+              </span>
             </div>
-          ))}
+            <div className="text-sm text-gray-400">{date}</div>
+          </div>
+          <div className="text-right">
+            <div>{approval.grid} Grids</div>
+            <div className="text-green-500">${approval.amount}</div>
+          </div>
         </div>
+
+        <div className="flex items-center gap-2 text-sm bg-gray-800 rounded p-2">
+          <span>{approval.wallet_address}</span>
+          <span>({approval.currency})</span>
+          <button className="p-1 text-gray-400 hover:text-white">📋</button>
+        </div>
+
+        <div className="flex justify-end gap-2 mt-2">
+          <button
+            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+            onClick={() => {
+              updateStatus({ status: 'Reject', email: approval.user_email });
+            }}
+          >
+            Reject
+          </button>
+          <button
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            onClick={() => {
+              updateStatus({ status: 'Approve', email: approval.user_email });
+            }}
+          >
+            Approve
+          </button>
+        </div>
+      </div>
+    );
+  })}
+</div>
+
       </div>
     </div>
   );

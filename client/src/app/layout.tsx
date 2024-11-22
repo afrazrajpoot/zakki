@@ -2,7 +2,9 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
-
+import { UserProvider } from "@auth0/nextjs-auth0/client";
+import Providers from "@/redux/Providers";
+import {AuthProvider} from "@/providers/AuthProvider"
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -29,7 +31,17 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>
+
+        <AuthProvider>
+
+       
+         <UserProvider>
+
+      {children}
+    </UserProvider>
+    </AuthProvider>
+    </Providers>
       </body>
     </html>
   );

@@ -12,6 +12,7 @@ import {
   Menu,
   Square
 } from 'lucide-react';
+import Link from 'next/link';
 
 // Constants
 const GRID_WIDTH = 2500;
@@ -297,16 +298,16 @@ export default function LandingPage() {
           </div>
 
           <div className="bg-blue-500">
-            <NavButton icon={<Home className="w-4 h-4" />} label="Home" onClick={() => {}} />
+            <Link href={'/'}><NavButton icon={<Home className="w-4 h-4" />} label="Home" onClick={() => {}} /></Link>
           </div>
           <div className="bg-emerald-500">
             <NavButton icon={<ShoppingCart className="w-4 h-4" />} label="Buy Spots" onClick={() => {}} color="green" />
           </div>
           <div className="bg-purple-500">
-            <NavButton icon={<LogIn className="w-4 h-4" />} label="Login" onClick={() => {}} color="purple" />
+            <Link href={'/login'}><NavButton icon={<LogIn className="w-4 h-4" />} label="Login" onClick={() => {}} color="purple" /></Link>
           </div>
           <div className="bg-orange-500">
-            <NavButton icon={<UserPlus className="w-4 h-4" />} label="Register" onClick={() => {}} color="orange" />
+            <Link href={'/register'}><NavButton icon={<UserPlus className="w-4 h-4" />} label="Register" onClick={() => {}} color="orange" /></Link>
           </div>
           <div className="bg-indigo-500">
             <NavButton icon={<HelpCircle className="w-4 h-4" />} label="About" onClick={() => {}} color="indigo" />

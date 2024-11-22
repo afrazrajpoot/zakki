@@ -8,6 +8,7 @@ import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import { Bitcoin, ChevronDown, CircleDollarSign, Coins, Copy, Check, ArrowLeft } from 'lucide-react';
 import { Label } from '@mui/icons-material';
+import { useAddPaymentMutation } from '@/store/storeApi';
 
 const PaymentInterface = () => {
   useEffect(() => {
@@ -36,11 +37,14 @@ const PaymentInterface = () => {
   const [copied, setCopied] = useState(false);
   const [copiedName, setCopiedName] = useState(false);
   const [userPaymentAddress, setUserPaymentAddress] = useState('');
+  const [grid,setGrid] = useState(null);
+  const [amount,setAmount] = useState(null);
   const [isAddressVerified, setIsAddressVerified] = useState(false);
   const [cryptoDetails, setCryptoDetails] = useState({
     email: '',
     currency: '',
   });
+const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
 
   const CRYPTO_ADDRESS = 'RwpMvodxg5a14w';
   const CRYPTO_NAME = 'PixelCraft Gallery';
@@ -120,7 +124,15 @@ const PaymentInterface = () => {
     setCopiedName(true);
     setTimeout(() => setCopiedName(false), 2000);
   };
-
+  useEffect(()=>{
+    if(isSuccess){
+        setShowCryptoConfirmation(false);
+                  setCryptoDetails({ email: '', currency: '' });
+                  setUserPaymentAddress('');
+                   setIsAddressVerified(false);
+    }
+   
+  },[isSuccess])
   if (showCryptoConfirmation) {
     return (
       <div className="w-full max-w-md mx-auto p-4">
@@ -190,11 +202,26 @@ const PaymentInterface = () => {
                     className="text-center bg-white"
                     placeholder="Paste the address you paid from"
                   />
+                    <p className="text-xl font-medium text-purple-600">Grid</p>
+                  <Input
+                    value={grid}
+                    onChange={(e) => setGrid(e.target.value)}
+                    className="text-center bg-white"
+                    placeholder="Paste the address you paid from"
+                  />
+
+<p className="text-xl font-medium text-purple-600">Amount</p>
+                  <Input
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="text-center bg-white"
+                    placeholder="Paste the address you paid from"
+                  />
                   <div className="flex items-center justify-center space-x-2">
                     <Checkbox 
                       id="address-verify" 
-                      checked={isAddressVerified}
-                      onCheckedChange={setIsAddressVerified}
+                      // checked={isAddressVerified}
+                      onChange={()=>setIsAddressVerified(true)}
                       className="border-2 border-purple-200"
                     />
                     <label 
@@ -209,10 +236,10 @@ const PaymentInterface = () => {
 
               <Button
                 onClick={() => {
-                  setShowCryptoConfirmation(false);
-                  setCryptoDetails({ email: '', currency: '' });
-                  setUserPaymentAddress('');
-                  setIsAddressVerified(false);
+                 
+               
+                  addPayment({email:cryptoDetails.email, currency:cryptoDetails.currency,wallet_address:userPaymentAddress,amount:parseInt(amount),grid:parseInt(grid)})
+
                 }}
                 className="w-full bg-gradient-to-r from-purple-400 to-pink-400 text-white py-6 text-xl hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
                 disabled={!isAddressVerified || !userPaymentAddress}

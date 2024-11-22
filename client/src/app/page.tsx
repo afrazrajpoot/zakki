@@ -17,6 +17,11 @@ import {
   Undo2,
   Redo2
 } from 'lucide-react';
+import { useUser } from '@auth0/nextjs-auth0/client';
+import { useSocialLoginMutation } from '@/store/storeApi';
+import { useAuth } from '@/providers/AuthProvider';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 interface NavButtonProps {
   icon: React.ReactNode;
@@ -108,7 +113,10 @@ const Home: React.FC = () => {
   const [currentColor, setCurrentColor] = useState<string>('#000000');
   const [currentTool, setCurrentTool] = useState<'draw' | 'erase' | 'select'>('select');
   const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
-  // Canvas States
+
+  const [socialLogin,{isLoading:socialLoading,isError,isSuccess,data:socialData}] = useSocialLoginMutation()
+  const {login} = useAuth()
+   // Canvas States
   const [pixels, setPixels] = useState<PixelData>({});
   const [isDrawing, setIsDrawing] = useState<boolean>(false);
   const [pixelSize] = useState<number>(10);
@@ -118,7 +126,8 @@ const Home: React.FC = () => {
   const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
   const [draggedPixels, setDraggedPixels] = useState<Set<number>>(new Set());
   const [selectionColors, setSelectionColors] = useState<{ [key: number]: string }>({});
-  
+  const { user, error, isLoading } = useUser();
+  const navigate = useRouter()
   // History States
   const [history, setHistory] = useState<Array<{
     pixels: PixelData, 
@@ -446,6 +455,21 @@ const Home: React.FC = () => {
     e.preventDefault();
     handleMouseUp();
   }, [handleMouseUp]);
+  useEffect(() => {
+    if (user) {
+    socialLogin({username:user.given_name,email:user.email})
+    }
+  }, [user]);
+  useEffect(()=>{
+    if(isSuccess){
+      login(socialData?.token,socialData?.user)
+    }
+    if(isError){
+      navigate.push('/Landingpage')
+    }
+
+  },[isSuccess,isError])
+
   return (
     <div className={`h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'} overflow-hidden flex flex-col`}>
       <div className="grid grid-cols-12 gap-0.5 bg-gray-500 h-13">
@@ -574,7 +598,8 @@ const Home: React.FC = () => {
         />
       </div>
 
-      <div className="bg-emerald-600">
+    <Link href={'/profile'}>
+    <div className="bg-emerald-600">
         <NavButton
           icon={<UserCircle className="w-4 h-4" />}
           label="Profile"
@@ -582,6 +607,7 @@ const Home: React.FC = () => {
           color="green"
         />
       </div>
+    </Link>
 
       <div className="bg-blue-500">
         <NavButton
