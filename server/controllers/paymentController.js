@@ -80,7 +80,7 @@ exports.addPayment = async (req, res) => {
             ]);
 
             res.status(201).json({
-                message: 'Payment added successfully',
+                message: 'Payment added successfull',
                 paymentId: result.insertId,
             });
         }
