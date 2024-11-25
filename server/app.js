@@ -13,10 +13,11 @@ app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 // database
 const db = require("./db/connection");
 db.connect();
+
+app.use(express.static('./public'));
 app.use("/api/v1", userRoute);
 app.use('/api/v1',require('./routes/paymentRoutes'))
-app.use(express.static('public'));
-
+app.use('/api/v1',require("./routes/adminRoute"))
 app.all("*", (req, res) => {
   res.status(404).send("Not Found");
 });

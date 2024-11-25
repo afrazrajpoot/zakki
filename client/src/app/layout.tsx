@@ -1,10 +1,12 @@
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet"></link>
+
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { UserProvider } from "@auth0/nextjs-auth0/client";
 import Providers from "@/redux/Providers";
 import {AuthProvider} from "@/providers/AuthProvider"
+import NextAuthProvider from "@/providers/NextAuthProvider"
+import  { Toaster } from 'react-hot-toast';
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
   variable: "--font-geist-sans",
@@ -37,8 +39,10 @@ export default function RootLayout({
 
        
          <UserProvider>
-
+      <NextAuthProvider>
+      <Toaster />
       {children}
+      </NextAuthProvider>
     </UserProvider>
     </AuthProvider>
     </Providers>

@@ -18,10 +18,11 @@ import {
   Redo2
 } from 'lucide-react';
 import { useUser } from '@auth0/nextjs-auth0/client';
-import { useSocialLoginMutation } from '@/store/storeApi';
+import { useGetSpotQuery, useGetTopQuery, useSocialLoginMutation } from '@/store/storeApi';
 import { useAuth } from '@/providers/AuthProvider';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 
 interface NavButtonProps {
   icon: React.ReactNode;
@@ -89,17 +90,17 @@ const NavButton: React.FC<NavButtonProps> = ({
     </button>
   );
 };
-const ScrollingTicker: React.FC = () => {
+const ScrollingTicker: React.FC = ({data}:any) => {
   return (
     <div className="bg-gray-800/50 border-y border-gray-700 overflow-hidden h-8">
       <div className="animate-ticker flex whitespace-nowrap py-1.5">
-        {[...owners, ...owners].map((owner, index) => (
+        {data?.map((owner, index) => (
           <div 
             key={index} 
             className="inline-flex items-center px-4 text-sm"
           >
-            <span className="text-gray-400">{owner.name}</span>
-            <span className="ml-2 text-blue-400">{owner.pixels} pixels</span>
+            <span className="text-gray-400">{owner.username}</span>
+            <span className="ml-2 text-blue-400">{owner.totalSpot} pixels</span>
             <span className="mx-4 text-gray-600">•</span>
           </div>
         ))}
@@ -113,16 +114,21 @@ const Home: React.FC = () => {
   const [currentColor, setCurrentColor] = useState<string>('#000000');
   const [currentTool, setCurrentTool] = useState<'draw' | 'erase' | 'select'>('select');
   const [mousePosition, setMousePosition] = useState<{x: number, y: number} | null>(null);
-
+  const { data: session } = useSession();
   const [socialLogin,{isLoading:socialLoading,isError,isSuccess,data:socialData}] = useSocialLoginMutation()
-  const {login} = useAuth()
+  const {isLoading:getSpotLoading,isError:getSpotError,data:getSpotData} = useGetSpotQuery()
+  const {data:getTopUser,isError:getTopError,isSuccess:getTopSuccess} = useGetTopQuery()
+
+
+  const {login,selectedPixels, setSelectedPixels} = useAuth()
    // Canvas States
   const [pixels, setPixels] = useState<PixelData>({});
-  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+  const [isDrawing, setIsDrawing] = useState<boolean>(false); 
   const [pixelSize] = useState<number>(10);
   
   // Selection States
-  const [selectedPixels, setSelectedPixels] = useState<Set<number>>(new Set());
+  // const [selectedPixels, setSelectedPixels] = useState<Set<number>>(new Set());
+
   const [selectionStart, setSelectionStart] = useState<{x: number, y: number} | null>(null);
   const [draggedPixels, setDraggedPixels] = useState<Set<number>>(new Set());
   const [selectionColors, setSelectionColors] = useState<{ [key: number]: string }>({});
@@ -140,7 +146,7 @@ const Home: React.FC = () => {
   // Refs
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
+  
   const isDarkMode = darkMode;
   // Initial load effect
   useEffect(() => {
@@ -456,10 +462,10 @@ const Home: React.FC = () => {
     handleMouseUp();
   }, [handleMouseUp]);
   useEffect(() => {
-    if (user) {
-    socialLogin({username:user.given_name,email:user.email})
+    if (session?.user) {
+    socialLogin({username:session?.user.name,email:session?.user.email})
     }
-  }, [user]);
+  }, [session]);
   useEffect(()=>{
     if(isSuccess){
       login(socialData?.token,socialData?.user)
@@ -469,7 +475,7 @@ const Home: React.FC = () => {
     }
 
   },[isSuccess,isError])
-
+ 
   return (
     <div className={`h-screen ${isDarkMode ? 'bg-gray-900 text-gray-100' : 'bg-gray-100 text-gray-900'} overflow-hidden flex flex-col`}>
       <div className="grid grid-cols-12 gap-0.5 bg-gray-500 h-13">
@@ -484,7 +490,7 @@ const Home: React.FC = () => {
            {/* Counter Column */}
       <div className={`${isDarkMode? 'bg-gray-800' : 'bg-gray-200'} flex flex-col items-center justify-center text-center px-1`}>
         <div className="font-['Press_Start_2P'] flex items-center space-x-0.5">
-          {String(TOTAL_PIXELS - selectedPixels.size)
+          {String(getSpotData?.data[0].totalSpot - selectedPixels.size)
             .padStart(6, '0')
             .split('')
             .map((digit, i) => (
@@ -619,16 +625,18 @@ const Home: React.FC = () => {
       </div>
 
       <div className="bg-purple-500">
-        <NavButton
+       <Link href={`/payment?pixels=${selectedPixels.size}`}>
+       <NavButton
           icon={<ShoppingCart className="w-4 h-4" />}
           label={`Buy (${selectedPixels.size})`}
           onClick={() => {/* Purchase logic */}}
           disabled={selectedPixels.size === 0}
           color="purple"
         />
+       </Link>
       </div>
     </div>
-    <ScrollingTicker />
+    <ScrollingTicker  data={getTopUser?.data}/>
     
     <div className="flex-1 overflow-x-auto overflow-y-hidden" ref={containerRef}>
       <div className="inline-block relative" style={{ transform: `scale(${zoomLevel})`, transformOrigin: 'top left' }}>

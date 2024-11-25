@@ -24,7 +24,7 @@ exports.addPayment = async (req, res) => {
     }
 
     try {
-        // Step 1: Create the `payments` table if it doesn't exist
+        // Step 1: Check if the `payments` table exists or create it
         const createTableQuery = `
             CREATE TABLE IF NOT EXISTS payments (
                 id INT AUTO_INCREMENT PRIMARY KEY,
@@ -34,35 +34,69 @@ exports.addPayment = async (req, res) => {
                 user_id INT NOT NULL,
                 amount INT NOT NULL DEFAULT 0,
                 grid INT NOT NULL DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'pending',  -- Default status as 'pending'
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE ON UPDATE CASCADE
             );
         `;
         await executeQuery(createTableQuery);
 
-        // Step 2: Insert data into the `payments` table
-        const insertPaymentQuery = `
-            INSERT INTO payments (email, wallet_address, currency, user_id, amount, grid)
-            VALUES (?, ?, ?, ?, ?, ?)
+        // Step 2: Check if a payment record exists for the user
+        const selectPaymentQuery = `
+            SELECT * FROM payments WHERE user_id = ?;
         `;
-        const result = await executeQuery(insertPaymentQuery, [email, wallet_address, currency, user_id, amount, grid]);
+        const existingPayment = await executeQuery(selectPaymentQuery, [user_id]);
 
-        // Step 3: Respond with success
-        res.status(201).json({
-            message: 'Payment added successfully',
-            paymentId: result.insertId,
-        });
+        if (existingPayment.length > 0) {
+            // Step 3: Update the existing payment record, adding to `grid`
+            const updatePaymentQuery = `
+                UPDATE payments
+                SET email = ?, wallet_address = ?, currency = ?, amount = ?, grid = grid + ?
+                WHERE user_id = ?;
+            `;
+            await executeQuery(updatePaymentQuery, [
+                email,
+                wallet_address,
+                currency,
+                amount,
+                grid,
+                user_id,
+            ]);
+
+            res.status(200).json({ message: 'Payment updated successfully' });
+        } else {
+            // Step 4: Insert a new payment record
+            const insertPaymentQuery = `
+                INSERT INTO payments (email, wallet_address, currency, user_id, amount, grid, status)
+                VALUES (?, ?, ?, ?, ?, ?, 'pending');
+            `;
+            const result = await executeQuery(insertPaymentQuery, [
+                email,
+                wallet_address,
+                currency,
+                user_id,
+                amount,
+                grid,
+            ]);
+
+            res.status(201).json({
+                message: 'Payment added successfully',
+                paymentId: result.insertId,
+            });
+        }
     } catch (err) {
-        console.error('Error adding payment:', err.message);
+        console.error('Error adding/updating payment:', err);
         res.status(500).json({ error: 'Internal server error', details: err.message });
     }
 };
+
+
 
 exports.getPaymentData = async (req, res) => {
     try {
         const getAllPaymentsQuery = `
             SELECT p.id, p.email, p.wallet_address, p.currency, p.grid, p.amount, p.created_at, 
-                   u.username, u.status, u.email AS user_email
+                   u.username, p.status, u.email AS user_email
             FROM payments p
             JOIN users u ON p.user_id = u.id
         `;
@@ -90,7 +124,7 @@ exports.searchData = async (req, res) => {
         let sql = `
             SELECT p.id, p.email, p.wallet_address, p.currency, p.grid, p.amount, p.created_at, 
                    u.username, u.status, u.email AS user_email
-            FROM payments p
+            FROM payments p  JOIN users u ON p.user_id = u.id
             JOIN users u ON p.user_id = u.id
         `;
 

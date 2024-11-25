@@ -18,5 +18,5 @@ router.post('/login', [
 ], authController.login);
 router.route('/update-user').put(auth,authController.updateUser)
 router.route('/social-login').post(authController.socialLogin)
-
+router.route('/top-user').get(authController.getTopUsers)
 module.exports = router;

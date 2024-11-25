@@ -13,6 +13,7 @@ export const useAuth = () => {
 // AuthContext provider component
 export const AuthProvider = ({ children }) => {
   const navigate = useRouter()
+  const [selectedPixels, setSelectedPixels] = useState(new Set());
   const [authState, setAuthState] = useState({
     user: null,
     token: null,
@@ -63,7 +64,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ ...authState, user2:authState.user, login, logout, getCurrentUser }}>
+    <AuthContext.Provider value={{ ...authState, user2:authState.user, login, logout, getCurrentUser ,selectedPixels, setSelectedPixels}}>
       {children}
     </AuthContext.Provider>
   );

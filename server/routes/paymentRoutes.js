@@ -4,6 +4,6 @@ const { addPayment, getPaymentData, searchData } = require('../controllers/payme
 const router = express.Router();
 
 router.route('/add-payment').post(auth,addPayment)
-router.route('/get-payment').get(auth,getPaymentData)
-router.route('/search-data').post(auth,searchData)
+router.route('/get-payment').get(getPaymentData)
+router.route('/search-data').post(searchData)
 module.exports = router

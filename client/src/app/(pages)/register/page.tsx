@@ -4,7 +4,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { useRegisterUserMutation } from '@/store/storeApi';
 import { useRouter } from 'next/navigation';
 import React, { useEffect, useState } from 'react';
-
+import { useSession, signIn, signOut } from 'next-auth/react';
 const SimpleStep = ({ number, text }: { number: number, text: string }) => (
   <div className="flex items-center gap-4 mb-6 pixel-border">
     <div className="flex-shrink-0 w-8 h-8 pixel-box flex items-center justify-center bg-[#4a90e2] border-pixel">
@@ -124,7 +124,10 @@ useEffect(()=>{
           <div className="max-w-md mx-auto">
           <a href="/api/auth/login"> <SocialButton platform="twitter" /></a>
            <a href="/api/auth/login"><SocialButton platform="facebook" /></a>
-            <a href="/api/auth/login"><SocialButton platform="google" /></a>
+           <div onClick={() => signIn('google')}>
+
+          <SocialButton platform="google" />
+           </div>
          
 
             <div className="text-center my-6">
@@ -176,7 +179,7 @@ useEffect(()=>{
                   <span className="pixel-font text-white text-shadow">
                     {isLoading ? 'REGISTERING...' : 'START GAME'}
                   </span>
-                </div>
+                </div>*
               </button>
               {isError && <div className="text-red-500">Error during registration. Please try again.</div>}
              

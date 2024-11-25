@@ -11,6 +11,7 @@ const User = {
             password VARCHAR(255) NOT NULL,
             status VARCHAR(50) DEFAULT 'pending',  -- Added the 'status' column with default value 'pending'
             email VARCHAR(255) NOT NULL UNIQUE,
+            totalSpot INT DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     `;
@@ -66,45 +67,61 @@ const User = {
     },
 
     // Update user information by email
-    updateByEmail: (email, { username, status, password }) => {
-        return new Promise(async (resolve, reject) => {
-            try {
-                // If a new password is provided, hash it
-                let updateQuery = 'UPDATE users SET ';
-                let params = [];
+ // Update user information by email
+updateByEmail: (email, { username, status, password, totalSpot }) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // Base query
+            let updateQuery = 'UPDATE users SET ';
+            let params = [];
 
-                if (username) {
-                    updateQuery += 'username = ?, ';
-                    params.push(username);
-                }
-
-                if (status) {
-                    updateQuery += 'status = ?, ';
-                    params.push(status);
-                }
-
-                if (password) {
-                    // Hash the new password
-                    const hashedPassword = await bcrypt.hash(password, 10);
-                    updateQuery += 'password = ?, ';
-                    params.push(hashedPassword);
-                }
-
-                // Remove trailing comma and space
-                updateQuery = updateQuery.slice(0, -2); // To remove the last comma and space
-                updateQuery += ' WHERE email = ?';
-                params.push(email); // Add the email to the parameters
-
-                // Execute the query
-                db.query(updateQuery, params, (err, results) => {
-                    if (err) return reject(err);
-                    resolve(results);
-                });
-            } catch (err) {
-                reject(err);
+            // Add fields to update
+            if (username) {
+                updateQuery += 'username = ?, ';
+                params.push(username);
             }
-        });
-    },
+
+            if (status) {
+                updateQuery += 'status = ?, ';
+                params.push(status);
+
+                // Adjust totalSpot based on status
+                if (totalSpot !== undefined) {
+                    if (status === 'Approve') {
+                        updateQuery += 'totalSpot = GREATEST(0, totalSpot + ?), ';
+                        params.push(totalSpot);
+                    } else if (status === 'Reject') {
+                        updateQuery += 'totalSpot = GREATEST(0, totalSpot - ?), ';
+                        params.push(totalSpot);
+                    }
+                }
+            }
+
+            if (password) {
+                // Hash the new password
+                const hashedPassword = await bcrypt.hash(password, 10);
+                updateQuery += 'password = ?, ';
+                params.push(hashedPassword);
+            }
+
+            // Remove trailing comma and space
+            updateQuery = updateQuery.slice(0, -2);
+            updateQuery += ' WHERE email = ?';
+            params.push(email); // Add the email to the parameters
+
+            // Execute the query
+            db.query(updateQuery, params, (err, results) => {
+                if (err) return reject(err);
+                resolve(results);
+            });
+        } catch (err) {
+            reject(err);
+        }
+    });
+},
+
+    
+    
 };
 
 module.exports = User;

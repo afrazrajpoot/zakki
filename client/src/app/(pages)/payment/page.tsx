@@ -8,9 +8,13 @@ import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
 import { Bitcoin, ChevronDown, CircleDollarSign, Coins, Copy, Check, ArrowLeft } from 'lucide-react';
 import { Label } from '@mui/icons-material';
-import { useAddPaymentMutation } from '@/store/storeApi';
+import { useAddPaymentMutation, useGetPaymentDataQuery, useGetPriceQuery, useGetSpotQuery, useGetTokenQuery } from '@/store/storeApi';
+import { useAuth } from '@/providers/AuthProvider';
+import { useRouter, useSearchParams } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const PaymentInterface = () => {
+
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -28,6 +32,9 @@ const PaymentInterface = () => {
     document.head.appendChild(style);
     return () => document.head.removeChild(style);
   }, []);
+  const searchParams = useSearchParams()
+  const pixels = searchParams.get('pixels');
+const navigate = useRouter()
 
   const [paymentMethod, setPaymentMethod] = useState('crypto');
   const [isTokenDropdownOpen, setIsTokenDropdownOpen] = useState(false);
@@ -37,7 +44,7 @@ const PaymentInterface = () => {
   const [copied, setCopied] = useState(false);
   const [copiedName, setCopiedName] = useState(false);
   const [userPaymentAddress, setUserPaymentAddress] = useState('');
-  const [grid,setGrid] = useState(null);
+  const [grid,setGrid] = useState<number>(null);
   const [amount,setAmount] = useState(null);
   const [isAddressVerified, setIsAddressVerified] = useState(false);
   const [cryptoDetails, setCryptoDetails] = useState({
@@ -45,7 +52,9 @@ const PaymentInterface = () => {
     currency: '',
   });
 const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
-
+const {isLoading:getPriceLoading,data:getPrice} = useGetPriceQuery()
+const {isLoading:getSpotLoading,data:getSpotData} = useGetSpotQuery()
+const {isLoading:getTokenLoading,isError:getTokenError,data:getTokenData} = useGetTokenQuery()
   const CRYPTO_ADDRESS = 'RwpMvodxg5a14w';
   const CRYPTO_NAME = 'PixelCraft Gallery';
   const PIXELS_AMOUNT = '541037';
@@ -100,7 +109,7 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
 
   const selectedToken = availableTokens.find(token => token.value === cryptoDetails.currency);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e:any) => {
     e.preventDefault();
     if (paymentMethod === 'paypal') {
       setShowConfirmation(true);
@@ -124,15 +133,52 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
     setCopiedName(true);
     setTimeout(() => setCopiedName(false), 2000);
   };
+  const handleAddPayment = async () => {
+   
+    try {
+      await addPayment({
+        email: cryptoDetails.email,
+        currency: cryptoDetails.currency,
+        wallet_address: userPaymentAddress,
+        amount: parseInt(getPrice?.data[0]?.price_per_grid) * parseInt(pixels),
+        grid: parseInt(pixels),
+      });
+      // Success logic
+    } catch (error) {
+      console.error("Payment failed", error);
+    }
+  };
   useEffect(()=>{
+    if(isError){
+      toast.error('Payment failed please try again',{
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      })
+    }
     if(isSuccess){
+      toast.success('payment in processing till Admin approve',{
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: true,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+      })
+
         setShowCryptoConfirmation(false);
                   setCryptoDetails({ email: '', currency: '' });
                   setUserPaymentAddress('');
                    setIsAddressVerified(false);
     }
-   
-  },[isSuccess])
+  //  navigate.push('/')
+  },[isSuccess,isError])
+console.log(getTokenData?.data,'token data')
   if (showCryptoConfirmation) {
     return (
       <div className="w-full max-w-md mx-auto p-4">
@@ -149,7 +195,7 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
             <div className="text-center space-y-6 mt-8">
               <div className="space-y-2">
                 <h2 className="text-4xl font-bold tracking-tight text-purple-600">Welcome TCHM</h2>
-                <p className="text-2xl font-medium text-orange-500">Spots {PIXELS_AMOUNT}</p>
+                <p className="text-2xl font-medium text-orange-500">Spots {getSpotData?.data[0]?.totalSpot}</p>
               </div>
 
               <div className="bg-purple-50 p-8 rounded-lg space-y-8">
@@ -157,7 +203,7 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
                   <p className="text-xl font-medium text-purple-600">Wallet Address</p>
                   <div className="flex items-center justify-center space-x-2">
                     <div className="bg-white px-4 py-2 rounded">
-                      <code className="text-orange-500">{CRYPTO_ADDRESS}</code>
+                      <code className="text-orange-500">{getPrice?.data[0]?.wallet_address}</code>
                     </div>
                     <button
                       onClick={handleCopyAddress}
@@ -176,7 +222,7 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
                   <p className="text-xl font-medium text-purple-600">Wallet Name</p>
                   <div className="flex items-center justify-center space-x-2">
                     <div className="bg-white px-4 py-2 rounded">
-                      <code className="text-orange-500">{CRYPTO_NAME}</code>
+                      <code className="text-orange-500">{getPrice?.data[0]?.wallet_name}</code>
                     </div>
                     <button
                       onClick={handleCopyName}
@@ -190,33 +236,20 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
                     </button>
                   </div>
                   <div className="flex justify-center mt-4">
-                    <img src="/api/placeholder/100/100" alt="QR Code" className="rounded-lg" />
+                    <img src={`http://localhost:8081/${getPrice?.data[0]?.walletQrCode?.split('/')[1]}`} alt="QR Code" className="rounded-lg" />
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <p className="text-xl font-medium text-purple-600">Your Wallet Address</p>
-                  <Input
+                  <input
                     value={userPaymentAddress}
                     onChange={(e) => setUserPaymentAddress(e.target.value)}
-                    className="text-center bg-white"
+                    className="mt-1 border-2 border-purple-200 p-[0.5vw] outline-none w-full focus:border-purple-400"
                     placeholder="Paste the address you paid from"
                   />
-                    <p className="text-xl font-medium text-purple-600">Grid</p>
-                  <Input
-                    value={grid}
-                    onChange={(e) => setGrid(e.target.value)}
-                    className="text-center bg-white"
-                    placeholder="Paste the address you paid from"
-                  />
+                  
 
-<p className="text-xl font-medium text-purple-600">Amount</p>
-                  <Input
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="text-center bg-white"
-                    placeholder="Paste the address you paid from"
-                  />
                   <div className="flex items-center justify-center space-x-2">
                     <Checkbox 
                       id="address-verify" 
@@ -235,12 +268,8 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
               </div>
 
               <Button
-                onClick={() => {
-                 
-               
-                  addPayment({email:cryptoDetails.email, currency:cryptoDetails.currency,wallet_address:userPaymentAddress,amount:parseInt(amount),grid:parseInt(grid)})
-
-                }}
+             
+                onClick={handleAddPayment}
                 className="w-full bg-gradient-to-r from-purple-400 to-pink-400 text-white py-6 text-xl hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
                 disabled={!isAddressVerified || !userPaymentAddress}
               >
@@ -255,20 +284,30 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
 
   return (
     <div className="w-full max-w-md mx-auto p-4">
-      <Card className="bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 p-0.5">
-        <CardContent className="p-6 bg-white rounded-lg">
+      <Card className="bg-gradient-to-br h-[40vw] from-purple-600 via-pink-500 to-orange-400 p-0.5">
+        <CardContent className="p-6 bg-white h-full rounded-lg">
           {/* Token Ticker */}
           <div className="w-full bg-gradient-to-r from-purple-50 to-pink-50 border-2 border-purple-200 rounded-lg mb-4 overflow-hidden">
             <div className="py-8">
               <div className="ticker-scroll flex whitespace-nowrap">
-                {[...tickerTokens, ...tickerTokens].map((token, index) => (
-                  <div key={index} className="inline-flex flex-col items-center justify-center mx-6">
-                    {token.symbol}
-                    <span className="text-xs text-gray-600 mt-2">
-                      {token.price}
-                    </span>
-                  </div>
-                ))}
+              {getTokenData?.data.map((token: any, index: any) => (
+  <div
+    key={index}
+    className="inline-flex flex-col items-center justify-center mx-6 rounded-lg p-4 hover:shadow-xl transform hover:scale-105 transition duration-300"
+  >
+    <figure className="w-16 h-16 rounded-full overflow-hidden border-2 border-blue-500 mb-3">
+      <img
+        src={`http://localhost:8081/${token.token_icon.split("/")[1]}`}
+        alt="img"
+        className="w-full h-full object-cover"
+      />
+    </figure>
+    <span className="text-base font-semibold text-gray-800">{token.token_name}</span>
+    {/* Uncomment the below span to include the price */}
+    {/* <span className="text-xs text-gray-600 mt-1">{token.price}</span> */}
+  </div>
+))}
+
               </div>
             </div>
           </div>
@@ -284,27 +323,27 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
             <div className="flex flex-col items-center justify-center py-8">
               <Bitcoin className="w-6 h-6 mb-1 text-orange-500" />
               <span className="text-[14px] mb-0.5 text-orange-600">Cryptocurrency</span>
-              <span className="text-sm text-orange-400">$12</span>
+              <span className="text-sm text-orange-400">${parseInt(getPrice?.data[0]?.price_per_grid) * parseInt(pixels)}</span>
             </div>
           </div>
 
           {/* Crypto Form */}
           {paymentMethod === 'crypto' && (
             <div className="space-y-4">
+                <label htmlFor="email"  className="text-purple-600 font-bold">Your Email</label>
               <div>
-                <Label htmlFor="email" className="text-purple-600">Your Email</Label>
-                <Input
+                <input
                   id="email"
                   type="email"
                   value={cryptoDetails.email}
                   onChange={(e) => setCryptoDetails({...cryptoDetails, email: e.target.value})}
-                  className="mt-1 border-2 border-purple-200 focus:border-purple-400"
+                  className="mt-1 border-2 border-purple-200 p-[0.5vw] outline-none w-full focus:border-purple-400"
                   placeholder="Enter your email"
                 />
               </div>
 
               <div>
-                <Label className="text-purple-600">Available Blockchains</Label>
+                <label className="text-purple-600 font-bold">Available Blockchains</label>
                 <div className="relative mt-1">
                   <div
                     onClick={() => setIsTokenDropdownOpen(!isTokenDropdownOpen)}
@@ -320,11 +359,11 @@ const [addPayment,{isLoading,isError,isSuccess}] = useAddPaymentMutation()
                         <span className="text-gray-500">Select Token</span>
                       )}
                     </div>
-                    <ChevronDown className={`h-5 w-5 text-purple-500 transition-transform ${isTokenDropdownOpen ? 'rotate-180' : ''}`} />
+                    <ChevronDown className={` w-5 text-purple-500 transition-transform ${isTokenDropdownOpen ? 'rotate-180' : ''}`} />
                   </div>
 
                   {isTokenDropdownOpen && (
-                    <div className="absolute z-10 w-full mt-1 bg-white border-2 border-purple-200 rounded-lg shadow-lg">
+                    <div className="absolute z-50 w-full mt-1 bg-white border-2 border-purple-200 rounded-lg shadow-lg">
                       {availableTokens.map((token) => (
                         <div
                           key={token.value}

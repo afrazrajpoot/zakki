@@ -4,8 +4,16 @@ const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const { default: axios } = require('axios');
 const bcrypt = require('bcryptjs');
+const db = require('../db/connection');
 const JWT_SECRET = process.env.JWT_SECRET || 'your_secret_key'; // Replace with a secure environment variable
-
+const executeQuery = (query, params = []) => {
+    return new Promise((resolve, reject) => {
+        db.query(query, params, (err, results) => {
+            if (err) return reject(err);
+            resolve(results);
+        });
+    });
+};
 const authController = {
     signup: async (req, res) => {
         const errors = validationResult(req);
@@ -86,9 +94,8 @@ const authController = {
         }
     },
     
-    updateUser:async (req, res) => {
-     
-        const { username, status, password ,email} = req.body;
+    updateUser :async (req, res) => {
+        const { username, status, password, email, totalSpot } = req.body;
     
         // Log the request body for debugging
         console.log(req.body);
@@ -99,24 +106,73 @@ const authController = {
         }
     
         try {
-            // Update the user in the database by email
-            const result = await User.updateByEmail(email, { username, status, password });
+            // Step 1: Update the user in the database by email
+            const result = await User.updateByEmail(email, { username, status, password, totalSpot });
     
             // If no rows were affected, it means the user email was not found
             if (result.affectedRows === 0) {
                 return res.status(404).json({ error: 'User not found' });
             }
     
+            // Step 2: Handle dynamic status for user approval or rejection
+            let paymentStatus = 'pending';  // Default status (for rejection)
+    
+            // If the user status is "approve", set the payment status to "approved"
+            if (status && status.toLowerCase() === 'approve') {
+                paymentStatus = 'Approve';  // Update the payment status to approved
+    
+                // Decrement totalSpot in the addspot table
+                const updateAddSpotQuery = `
+                    UPDATE addspot
+                    SET totalSpot = totalSpot - ?
+                    WHERE id = 1; -- Assuming only one record exists in the addspot table
+                `;
+                const spotUpdateResult = await executeQuery(updateAddSpotQuery, [totalSpot]);
+    
+                if (spotUpdateResult.affectedRows === 0) {
+                    return res.status(404).json({ error: 'No addSpot record found to update' });
+                }
+            }
+            if (status && status.toLowerCase() === 'reject') {
+                paymentStatus = 'Reject';  // Update the payment status to approved
+    
+                // Decrement totalSpot in the addspot table
+                const updateAddSpotQuery = `
+                    UPDATE addspot
+                    SET totalSpot = totalSpot + ?
+                    WHERE id = 1; -- Assuming only one record exists in the addspot table
+                `;
+                const spotUpdateResult = await executeQuery(updateAddSpotQuery, [totalSpot]);
+    
+                if (spotUpdateResult.affectedRows === 0) {
+                    return res.status(404).json({ error: 'No addSpot record found to update' });
+                }
+            }
+            // If the status is "reject", keep the payment status as "pending"
+    
+            // Step 3: Dynamically update payment status in the payments table
+            const updatePaymentStatusQuery = `
+                UPDATE payments
+                SET status = ?
+                WHERE user_id = (SELECT id FROM users WHERE email = ?)
+            `;
+            const paymentStatusUpdateResult = await executeQuery(updatePaymentStatusQuery, [paymentStatus, email]);
+    
+            if (paymentStatusUpdateResult.affectedRows === 0) {
+                return res.status(404).json({ error: 'No payments found for the user' });
+            }
+    
             // Respond with success
             res.status(200).json({
                 message: 'User updated successfully',
-                affectedRows: result.affectedRows, // Number of rows updated
+                affectedRows: result.affectedRows, // Number of rows updated in users table
             });
         } catch (err) {
             console.error('Error updating user:', err.message);
             res.status(500).json({ error: 'Internal server error', details: err.message });
         }
     },
+    
     socialLogin: async (req, res) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -160,7 +216,30 @@ const authController = {
             res.status(500).json({ error: 'Social login failed' });
         }
     },
-    
+    getTopUsers : (req, res) => {
+        const query = `
+          SELECT * 
+          FROM users 
+          ORDER BY totalSpot DESC 
+          LIMIT 10
+        `;
+      
+        db.query(query, (err, results) => {
+          if (err) {
+            console.error('Database query error:', err);
+            return res.status(500).json({
+              success: false,
+              message: 'An error occurred while fetching users',
+            });
+          }
+      
+          res.status(200).json({
+            success: true,
+            data: results,
+          });
+        });
+      }
+      
 
     
 };
